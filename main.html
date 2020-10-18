@@ -429,7 +429,7 @@ var sketch = function( p ) {
   var current_raw_line;
   var strokes;
   var current_strokes;
-  var final_strokes = null;
+  var final_strokes = [];
   var line_color, predict_line_color;
   var line_color_alpha = 64;
   var final_color_alpha = 255;
@@ -496,7 +496,7 @@ var sketch = function( p ) {
     if (Array.isArray(prev_pen_override)) {
       penState = prev_pen_override;
     }
-
+    console.log(x, y);
     p.curveTightness(0.5);
 
     var lines = [];
@@ -510,7 +510,7 @@ var sketch = function( p ) {
       [dx, dy, pen_down, pen_up, pen_end] = example[i];
 
       if (prev_pen[2] == 1) { // end of drawing.
-        break;
+        // break;
       }
 
       x += dx;
@@ -536,7 +536,7 @@ var sketch = function( p ) {
     p.stroke(line_color);
     p.strokeWeight(line_width);
     p.noFill();
-
+    console.log(lines);
     for (i=0;i<lines.length;i++) {
       line = lines[i];
       if (line.length > 1) {
@@ -763,6 +763,7 @@ var sketch = function( p ) {
     strokes = [];
     current_strokes = [];
     modelStrokes = [];
+    final_strokes = [];
     // start drawing from somewhere in middle of the canvas
     init_model_coordinates();
 
@@ -833,6 +834,7 @@ var sketch = function( p ) {
     screen_height = get_window_height(); //
 
     if (run_encode_strokes) {
+      console.log("run encode stroke")
       run_encode_strokes = false;
       encode_strokes(current_strokes);
       current_strokes = [];
@@ -853,7 +855,7 @@ var sketch = function( p ) {
       if (userPen.prevState == 1) {
         // clear_screen();
         console.log("user draw");
-        draw_example(strokes, start_x, start_y, line_color);
+        // draw_example(strokes, start_x, start_y, line_color);
         model_drawing_count=0;
       }
       if (has_started == false) { // first time anything is written
@@ -897,7 +899,6 @@ var sketch = function( p ) {
           // update raw_lines
           current_raw_line.push([x, y]);
           just_finished_line = true;
-
           // using the previous pen states, and hidden state, get next hidden state
           // update_rnn_state();
         }
@@ -931,17 +932,20 @@ var sketch = function( p ) {
           var stroke = DataTool.line_to_stroke(current_raw_line_simple, [last_x, last_y]);
           raw_lines.push(current_raw_line_simple);
           strokes = strokes.concat(stroke);
+          console.log(stroke);
           current_strokes = current_strokes.concat(stroke);
+          final_strokes = final_strokes.concat(stroke);
 
           // redraw simplified strokes
           clear_screen();
-          draw_example(strokes, start_x, start_y, line_color);
+          draw_example(final_strokes, start_x, start_y, line_color);
 
           old_title_text = title_text;
           set_title_text("sketch-rnn is working ...");
 
           // initialize rnn:
           run_encode_strokes = true;
+          // strokes = [];
 
         } else {
           console.log("current raw line not");
@@ -964,6 +968,7 @@ var sketch = function( p ) {
         predict_line_color = p.color(p.random(64, 224), p.random(64, 224), p.random(64, 224),line_color_alpha);
         draw_example(final_strokes, start_x, start_y, line_color);
         restarting_model_lock = false;
+        console.log("restarting model end")
       }
 
       // have machine take over the drawing here:
@@ -991,10 +996,12 @@ var sketch = function( p ) {
         if (modelPen.end === 1) {
           console.log("modelPen end")
           clear_screen();
-          final_strokes = strokes.concat(modelStrokes);;
+          final_strokes = final_strokes.concat(modelStrokes);
           console.log(final_strokes)
+        
           draw_example(final_strokes, start_x, start_y, p.color(0,0,0,line_color_alpha));
-          // restart_model(strokes);
+          
+          // restart_model(final_strokes);
           restarting_model_lock = true;
           restarting_model_lock_count = restarting_model_lock_frames;
         } else {
@@ -1058,12 +1065,6 @@ var sketch = function( p ) {
       // model_sel_event(select_dom.value);
       model_sel_event(item);
     }
-  };
-
-  var temperature_slider_event = function() {
-    temperature = temperature_slider.value()/100;
-    clear_screen();
-    draw_example(strokes, start_x, start_y, line_color);
   };
 
   var deviceReleased = function() {
